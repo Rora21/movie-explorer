@@ -1,100 +1,84 @@
-import React, { useState, useEffect } from "react";
-import MovieCard from "../components/MovieCard";
+import { useEffect, useState } from "react";
+import MovieCard from "./MovieCard";
+import SearchBar from "./SearchBar";
 
-const Home = () => {
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [favorites, setFavorites] = useState(() => {
-    const stored = localStorage.getItem("favorite_movies");
-    return stored ? JSON.parse(stored) : [];
-  });
+export default function Home({ movies = [], onFavoriteToggle = () => {}, favorites = [] }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [fetched, setFetched] = useState([]);
+  const list = movies.length ? movies : fetched;
 
-  // Fetch movies from API
   useEffect(() => {
+    if (movies.length) return;
+    let cancelled = false;
     fetch("https://api.tvmaze.com/shows")
       .then((res) => res.json())
       .then((data) => {
-        const mapped = data.map((m) => ({
-          id: m.id,
-          name: m.name,
-          genres: m.genres,
-          image: m.image?.medium || "",
-          summary: m.summary,
+        if (cancelled) return;
+        const mapped = (data || []).map((d) => ({
+          id: d.id,
+          name: d.name,
+          title: d.name,
+          image: d.image,
         }));
-        setMovies(mapped);
-        setLoading(false);
+        setFetched(mapped);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => setFetched([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [movies.length]);
 
-  // Save favorites in localStorage
-  useEffect(() => {
-    localStorage.setItem("favorite_movies", JSON.stringify(favorites));
-  }, [favorites]);
-
-  const toggleFavorite = (movie) => {
-    if (favorites.find((m) => m.id === movie.id)) {
-      setFavorites(favorites.filter((m) => m.id !== movie.id));
-    } else {
-      setFavorites([...favorites, movie]);
-    }
-  };
-
-  // Get all genres for filter
-  const categories = Array.from(new Set(movies.flatMap((m) => m.genres)));
-
-  const filteredMovies = movies.filter((m) => {
-    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category ? m.genres.includes(category) : true;
-    return matchesSearch && matchesCategory;
-  });
-
-  if (loading) return <p className="text-center mt-8">Loading movies...</p>;
+  const filteredMovies = list.filter((movie) =>
+    (movie.title || movie.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div>
-      {/* Search + Category Filter */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        <input
-          type="text"
-          placeholder="Search movies..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="p-2 border rounded w-full md:w-2/3"
-        />
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="p-2 border rounded w-full md:w-1/3"
-        >
-          <option value="">All Genres</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
-      </div>
+    <main className="min-h-screen bg-gray-950 text-white">
+      {/* Hero Section */}
+      <section
+        className="relative h-[60vh] flex flex-col items-center justify-center text-center bg-cover bg-center mb-10 rounded-b-3xl shadow-lg"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1608889175123-36e9a90b1d1d?auto=format&fit=crop&w=1600&q=80')",
+        }}
+      >
+        <div className="absolute inset-0 bg-black bg-opacity-60 rounded-b-3xl"></div>
 
-      {/* Movies Grid */}
-      {filteredMovies.length === 0 ? (
-        <p className="text-center text-gray-300">No movies found 😢</p>
-      ) : (
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredMovies.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              toggleFavorite={toggleFavorite}
-              isFavorite={favorites.some((m) => m.id === movie.id)}
-            />
-          ))}
+        <div className="relative z-10 px-6">
+          <h1 className="text-5xl font-extrabold mb-3">Explore Movies</h1>
+          <p className="text-gray-300 text-lg mb-6">
+            Find your next favorite movie and add it to your list.
+          </p>
+          <div className="flex justify-center gap-4">
+            
+          </div>
         </div>
-      )}
-    </div>
-  );
-};
+      </section>
 
-export default Home;
+      {/* Movies Section */}
+      <section className="max-w-5xl mx-auto p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+          <h2 className="text-2xl font-semibold text-gray-100 mb-2 sm:mb-0">
+            Browse the list and view details
+          </h2>
+          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+        </div>
+
+        {filteredMovies.length === 0 ? (
+          <p className="text-center text-gray-400 text-lg">No movies found.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {filteredMovies.map((m) => (
+              <MovieCard
+                key={m.id}
+                movie={m}
+                onFavoriteToggle={onFavoriteToggle}
+                isFavorite={favorites.some((f) => f.id === m.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}

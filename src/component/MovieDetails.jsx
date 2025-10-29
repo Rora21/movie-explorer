@@ -43,7 +43,7 @@ const MovieDetails = () => {
   };
 
   if (loading) return <p className="text-center mt-8">Loading movie...</p>;
-  if (!movie) return <p className="text-center mt-8">Movie not found 😢</p>;
+  if (!movie) return <p className="text-center mt-8">Movie not found </p>;
 
   return (
     <div className="max-w-3xl mx-auto mt-8 bg-gray-800 p-6 rounded shadow">
@@ -74,7 +74,6 @@ const MovieDetails = () => {
           Official Site
         </a>
       )}
-
       <button
         onClick={toggleFavorite}
         className={`mt-4 px-4 py-2 rounded text-white ${
